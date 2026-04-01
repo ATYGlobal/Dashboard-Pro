@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#05080F">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>AdBanner — Control Center</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Exo+2:wght@400;600;700&display=swap" rel="stylesheet">
+<!-- FIX: cdnjs es más fiable que unpkg para evitar "React is not defined" -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.development.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.development.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#05080F;--sf:#0A0F1E;--sf2:#0F1628;
+  --bd:rgba(0,255,136,0.09);
+  --ng:#00FF88;--nc:#00D4FF;--nr:#FF3B5C;--na:#FFB800;--np:#C084FC;
+  --tx:#D8E8FF;--tm:rgba(216,232,255,0.38);
+  --fm:'Share Tech Mono',monospace;--fu:'Exo 2',sans-serif;
+}
+html,body{height:100%;background:var(--bg);color:var(--tx);font-family:var(--fu)}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,255,136,.010) 3px,rgba(0,255,136,.010) 4px)}
+#root{position:relative;z-index:1;display:flex;height:100vh;overflow:hidden}
+/* SIDEBAR */
+.sb{width:206px;flex-shrink:0;background:var(--sf);border-right:1px solid var(--bd);display:flex;flex-direction:column}
+.sb-lg{padding:18px 15px 13px;border-bottom:1px solid var(--bd)}
+.sb-lg .tg{font-family:var(--fm);font-size:9px;letter-spacing:3px;color:var(--ng);opacity:.6}
+.sb-lg .nm{font-size:19px;font-weight:700;line-height:1.1;margin-top:2px}
+.sb-lg .vr{font-family:var(--fm);font-size:9px;color:var(--tm);margin-top:3px}
+.nav{padding:10px 0;flex:1;overflow-y:auto}
+.ni{padding:9px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600;
+  color:var(--tm);border-left:2px solid transparent;transition:all .15s;user-select:none}
+.ni:hover{color:var(--tx);background:rgba(0,255,136,.03)}
+.ni.on{color:var(--ng);border-left-color:var(--ng);background:rgba(0,255,136,.06)}
+.ni-ic{font-size:13px;width:18px;text-align:center;flex-shrink:0}
+.nd{height:1px;background:var(--bd);margin:6px 13px}
+.sb-ft{padding:10px 13px;border-top:1px solid var(--bd)}
+.sb-st{display:flex;align-items:center;gap:7px;margin-bottom:5px}
+.dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;position:relative}
+.dot-g{background:var(--ng)}.dot-g::after{content:'';position:absolute;inset:-3px;border-radius:50%;background:rgba(0,255,136,.26);animation:pulse 2s infinite}
+.dot-a{background:var(--na)}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:.8}50%{transform:scale(2.2);opacity:0}}
+.sb-st-t{font-family:var(--fm);font-size:9px;letter-spacing:1px;color:var(--tm)}
+.sb-tm{font-family:var(--fm);font-size:10px;color:var(--tm)}
+/* MAIN */
+.main{flex:1;overflow-y:auto;padding:20px;min-width:0}
+.main::-webkit-scrollbar{width:3px}
+.main::-webkit-scrollbar-thumb{background:rgba(0,255,136,.12);border-radius:2px}
+/* PAGE HEADER */
+.ph{margin-bottom:16px;display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.ph h1{font-size:20px;font-weight:700}
+.ph-tag{font-family:var(--fm);font-size:9px;letter-spacing:2px;color:var(--tm);margin-top:3px}
+.ph-ac{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+/* KPI GRID */
+.kg{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:9px;margin-bottom:14px}
+.kpi{background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:12px 14px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.kpi.g::before{background:var(--ng)}.kpi.c::before{background:var(--nc)}
+.kpi.r::before{background:var(--nr)}.kpi.a::before{background:var(--na)}.kpi.p::before{background:var(--np)}
+.kl{font-family:var(--fm);font-size:9px;letter-spacing:2px;color:var(--tm);text-transform:uppercase;margin-bottom:6px}
+.kv{font-size:24px;font-weight:700;line-height:1;font-family:var(--fm)}
+.kv.g{color:var(--ng)}.kv.c{color:var(--nc)}.kv.r{color:var(--nr)}.kv.a{color:var(--na)}.kv.p{color:var(--np)}
+.ks{font-family:var(--fm);font-size:10px;color:var(--tm);margin-top:4px}
+/* CARDS */
+.card{background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:15px;margin-bottom:11px}
+.ch{font-family:var(--fm);font-size:9px;letter-spacing:2px;color:var(--tm);text-transform:uppercase;
+  margin-bottom:11px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+@media(max-width:820px){.g2{grid-template-columns:1fr}.sb{width:50px}.nl{display:none}}
+/* ALERTS */
+.al{border-radius:5px;padding:8px 11px;margin-bottom:9px;font-family:var(--fm);font-size:10px;letter-spacing:.5px;display:flex;align-items:center;gap:9px}
+.al-r{background:rgba(255,59,92,.07);border:1px solid rgba(255,59,92,.20);color:var(--nr)}
+.al-a{background:rgba(255,184,0,.07);border:1px solid rgba(255,184,0,.20);color:var(--na)}
+.al-c{background:rgba(0,212,255,.07);border:1px solid rgba(0,212,255,.20);color:var(--nc)}
+/* BADGES */
+.badge{display:inline-block;padding:2px 7px;border-radius:3px;font-family:var(--fm);font-size:9px;letter-spacing:.8px;font-weight:600}
+.bg{background:rgba(0,255,136,.09);color:var(--ng);border:1px solid rgba(0,255,136,.18)}
+.br{background:rgba(255,59,92,.09);color:var(--nr);border:1px solid rgba(255,59,92,.18)}
+.ba{background:rgba(255,184,0,.09);color:var(--na);border:1px solid rgba(255,184,0,.18)}
+.bc{background:rgba(0,212,255,.09);color:var(--nc);border:1px solid rgba(0,212,255,.18)}
+.bp{background:rgba(192,132,252,.09);color:var(--np);border:1px solid rgba(192,132,252,.18)}
+.bx{background:rgba(255,255,255,.05);color:var(--tm);border:1px solid rgba(255,255,255,.09)}
+/* BUTTONS */
+.btn{padding:6px 12px;border-radius:5px;border:none;cursor:pointer;font-family:var(--fm);font-size:10px;letter-spacing:.8px;font-weight:600;transition:all .15s;flex-shrink:0}
+.bn-g{background:rgba(0,255,136,.09);color:var(--ng);border:1px solid rgba(0,255,136,.20)}.bn-g:hover{background:rgba(0,255,136,.17)}
+.bn-r{background:rgba(255,59,92,.09);color:var(--nr);border:1px solid rgba(255,59,92,.20)}.bn-r:hover{background:rgba(255,59,92,.17)}
+.bn-a{background:rgba(255,184,0,.09);color:var(--na);border:1px solid rgba(255,184,0,.20)}.bn-a:hover{background:rgba(255,184,0,.17)}
+.bn-c{background:rgba(0,212,255,.09);color:var(--nc);border:1px solid rgba(0,212,255,.20)}.bn-c:hover{background:rgba(0,212,255,.17)}
+.btn-frz{background:rgba(255,59,92,.16);color:var(--nr);border:1px solid rgba(255,59,92,.36);animation:blink 1.2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.5}}
+/* TABLE */
+.tw{overflow-x:auto}
+.tbl{width:100%;border-collapse:collapse;font-size:12px;min-width:540px}
+.tbl th{font-family:var(--fm);font-size:9px;letter-spacing:1px;color:var(--tm);text-align:left;padding:7px 9px;border-bottom:1px solid var(--bd);text-transform:uppercase;white-space:nowrap}
+.tbl td{padding:8px 9px;border-bottom:1px solid rgba(255,255,255,.022);white-space:nowrap}
+.tbl tr:hover td{background:rgba(0,255,136,.016)}
+.mn{font-family:var(--fm)}.mt{color:var(--tm)}.f10{font-size:10px}.f11{font-size:11px}
+/* RISK BAR */
+.rb{display:flex;align-items:center;gap:7px;min-width:88px}
+.rb-t{flex:1;height:3px;background:rgba(255,255,255,.07);border-radius:2px}
+.rb-f{height:100%;border-radius:2px}
+/* PAYOUT FLOW */
+.flow{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:11px}
+.fst{background:var(--sf2);border:1px solid var(--bd);border-radius:5px;padding:6px 11px;font-family:var(--fm);font-size:10px;letter-spacing:.8px;color:var(--tm);cursor:pointer;transition:all .15s}
+.fst:hover,.fst.fa{border-color:var(--nc);color:var(--nc);background:rgba(0,212,255,.05)}
+/* RETENTION */
+.rr{display:grid;grid-template-columns:44px 1fr 40px;gap:8px;align-items:center;margin-bottom:8px}
+.rl{font-family:var(--fm);font-size:10px;color:var(--tm)}
+.rt{background:rgba(255,255,255,.06);border-radius:3px;height:4px}
+.rf{height:100%;border-radius:3px;background:var(--nc)}
+.rp{font-family:var(--fm);font-size:10px;color:var(--nc);text-align:right}
+/* CHIPS */
+.chips{display:flex;gap:5px;flex-wrap:wrap}
+.chip{padding:3px 9px;border-radius:20px;font-family:var(--fm);font-size:9px;letter-spacing:.8px;cursor:pointer;border:1px solid var(--bd);color:var(--tm);background:transparent;transition:all .15s}
+.chip:hover{border-color:rgba(0,212,255,.3);color:var(--nc)}
+.chip.on{border-color:var(--nc);color:var(--nc);background:rgba(0,212,255,.05)}
+/* MODAL */
+.mbg{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px}
+.mbox{background:var(--sf);border:1px solid rgba(0,212,255,.16);border-radius:10px;padding:22px;min-width:310px;max-width:450px;width:100%}
+.mbox h3{font-size:14px;font-weight:700;margin-bottom:7px}
+.mbox p{font-size:12px;color:var(--tm);margin-bottom:18px;line-height:1.65}
+.macts{display:flex;gap:7px;justify-content:flex-end}
+/* CONFIG */
+.cfg{background:var(--sf2);border:1px solid rgba(255,184,0,.17);border-radius:6px;padding:10px 13px;margin-bottom:15px;display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.cfg-lbl{font-family:var(--fm);font-size:9px;letter-spacing:2px;color:var(--na);white-space:nowrap}
+.cfg-in{background:var(--sf);border:1px solid var(--bd);border-radius:4px;padding:5px 9px;color:var(--tx);font-family:var(--fm);font-size:10px;flex:1;min-width:130px}
+.cfg-in:focus{outline:1px solid var(--na)}.cfg-in::placeholder{color:var(--tm)}
+/* PROGRESS BAR */
+.pb-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.pb-lbl{font-family:var(--fm);font-size:10px;color:var(--tm);min-width:68px}
+.pb-track{flex:1;height:5px;background:rgba(255,255,255,.06);border-radius:3px}
+.pb-fill{height:100%;border-radius:3px}
+.pb-val{font-family:var(--fm);font-size:10px;min-width:42px;text-align:right}
+/* SEG MINI */
+.sc{flex:1;background:var(--sf2);border:1px solid var(--bd);border-radius:6px;padding:9px;text-align:center;min-width:66px}
+.top-row{display:flex;align-items:center;gap:9px;margin-bottom:8px}
+/* LOADING */
+.loading{padding:48px;text-align:center;font-family:var(--fm);font-size:11px;letter-spacing:2px;animation:lp 1s infinite}
+@keyframes lp{0%,100%{opacity:.22}50%{opacity:1}}
+/* PROFIT BAR */
+.pbar{height:8px;background:rgba(255,255,255,.05);border-radius:4px;margin-top:8px;overflow:hidden}
+.pbar-f{height:100%;border-radius:4px;transition:width .6s}
+</style>
+</head>
+<body>
+<div id="root"><div style="padding:40px;font-family:'Share Tech Mono',monospace;color:#00FF88;font-size:12px;letter-spacing:2px;animation:lp 1s infinite;position:relative;z-index:1">INICIANDO DASHBOARD...</div></div>
+<script>
+/* FIX: todo dentro de window.addEventListener('load') garantiza que
+   React, ReactDOM y Supabase están cargados antes de ejecutar código */
+window.addEventListener('load', function() {
+"use strict";
+const {useState,useEffect,useCallback} = React;
+const E = React.createElement;
+
+/* ─── SUPABASE CONFIG ─────────────────────────────────────
+   ➜ Introduce tus credenciales en la barra amarilla del dashboard
+     o directamente aquí:
+   Tablas necesarias:
+     · users    → id, email, status, risk_score, total_earned,
+                   total_withdrawn, referral_count, last_active,
+                   d1_retention, d7_retention
+     · payouts  → id, user_id, email, amount, status, method, created_at
+     · referrals→ id, referrer_id, referrer_email, referred_email,
+                   status, revenue_generated, created_at
+──────────────────────────────────────────────────────────── */
+let SB_URL = localStorage.getItem('sb_url') || 'https://YOUR_PROJECT.supabase.co';
+let SB_KEY = localStorage.getItem('sb_key') || 'YOUR_ANON_KEY';
+let sb = null;
+function initSB(u,k){ try{ sb = supabase.createClient(u,k); }catch(e){ sb=null; } }
+initSB(SB_URL, SB_KEY);
+const isMock = () => !SB_URL || SB_URL.includes('YOUR_PROJECT') || !SB_URL.startsWith('https://');
+
+/* ─── MOCK DATA ───────────────────────────────────────── */
+const TODAY = new Date().toISOString().slice(0,10);
+const dAgo = n => new Date(Date.now()-n*86400000).toISOString().slice(0,10);
+
+const MK_USERS = [
+  {id:'u_001',email:'alex@gmail.com',status:'active',risk_score:12,total_earned:42.50,total_withdrawn:30,referral_count:5,last_active:TODAY,d1_retention:.82,d7_retention:.54},
+  {id:'u_002',email:'sofia@mail.com',status:'active',risk_score:8,total_earned:88.20,total_withdrawn:60,referral_count:12,last_active:TODAY,d1_retention:.91,d7_retention:.67},
+  {id:'u_003',email:'bot_farm@gm.com',status:'flagged',risk_score:89,total_earned:210,total_withdrawn:195,referral_count:47,last_active:TODAY,d1_retention:.99,d7_retention:.99},
+  {id:'u_004',email:'marc_t@hotmail.com',status:'active',risk_score:21,total_earned:15.30,total_withdrawn:10,referral_count:2,last_active:dAgo(1),d1_retention:.45,d7_retention:.22},
+  {id:'u_005',email:'clicker_001@mail.com',status:'blocked',risk_score:95,total_earned:340,total_withdrawn:290,referral_count:81,last_active:dAgo(2),d1_retention:.99,d7_retention:.99},
+  {id:'u_006',email:'laura@gmail.com',status:'active',risk_score:5,total_earned:22.10,total_withdrawn:15,referral_count:3,last_active:TODAY,d1_retention:.70,d7_retention:.41},
+  {id:'u_007',email:'test_acc@temp.io',status:'flagged',risk_score:74,total_earned:98,total_withdrawn:90,referral_count:33,last_active:TODAY,d1_retention:.97,d7_retention:.95},
+  {id:'u_008',email:'pedro@outlook.com',status:'active',risk_score:15,total_earned:31,total_withdrawn:20,referral_count:4,last_active:TODAY,d1_retention:.68,d7_retention:.38},
+];
+const MK_PAYOUTS = [
+  {id:'p_001',user_id:'u_001',email:'alex@gmail.com',amount:12.50,status:'pending',created_at:new Date().toISOString(),method:'PayPal'},
+  {id:'p_002',user_id:'u_002',email:'sofia@mail.com',amount:28.00,status:'pending',created_at:new Date().toISOString(),method:'Crypto'},
+  {id:'p_003',user_id:'u_003',email:'bot_farm@gm.com',amount:45.00,status:'validating',created_at:new Date(Date.now()-50000000).toISOString(),method:'PayPal'},
+  {id:'p_004',user_id:'u_004',email:'marc_t@hotmail.com',amount:5.00,status:'approved',created_at:new Date(Date.now()-86400000).toISOString(),method:'Stripe'},
+  {id:'p_005',user_id:'u_007',email:'test_acc@temp.io',amount:22.00,status:'pending',created_at:new Date().toISOString(),method:'Crypto'},
+  {id:'p_006',user_id:'u_006',email:'laura@gmail.com',amount:7.50,status:'paid',created_at:new Date(Date.now()-172800000).toISOString(),method:'PayPal'},
+  {id:'p_007',user_id:'u_005',email:'clicker_001@mail.com',amount:50.00,status:'rejected',created_at:new Date(Date.now()-259200000).toISOString(),method:'Crypto'},
+];
+const MK_REFS = [
+  {id:'r_001',referrer_id:'u_002',referrer_email:'sofia@mail.com',referred_email:'carlos@gmail.com',status:'active',revenue_generated:18.40,created_at:dAgo(3)},
+  {id:'r_002',referrer_id:'u_002',referrer_email:'sofia@mail.com',referred_email:'ana@hotmail.com',status:'active',revenue_generated:12.10,created_at:dAgo(5)},
+  {id:'r_003',referrer_id:'u_003',referrer_email:'bot_farm@gm.com',referred_email:'bot_002@temp.io',status:'flagged',revenue_generated:44.00,created_at:dAgo(1)},
+  {id:'r_004',referrer_id:'u_003',referrer_email:'bot_farm@gm.com',referred_email:'bot_003@temp.io',status:'flagged',revenue_generated:41.00,created_at:dAgo(1)},
+  {id:'r_005',referrer_id:'u_001',referrer_email:'alex@gmail.com',referred_email:'maria@gmail.com',status:'active',revenue_generated:9.20,created_at:dAgo(7)},
+  {id:'r_006',referrer_id:'u_007',referrer_email:'test_acc@temp.io',referred_email:'fake_01@yopmail.com',status:'flagged',revenue_generated:22.00,created_at:dAgo(2)},
+  {id:'r_007',referrer_id:'u_006',referrer_email:'laura@gmail.com',referred_email:'jorge@gmail.com',status:'inactive',revenue_generated:0.50,created_at:dAgo(10)},
+];
+const MK_REV = {
+  daily:[
+    {day:'L',total:142,gaming:55,tech:38,lifestyle:24,sports:15,news:10},
+    {day:'M',total:168,gaming:62,tech:44,lifestyle:28,sports:20,news:14},
+    {day:'X',total:155,gaming:58,tech:40,lifestyle:26,sports:18,news:13},
+    {day:'J',total:191,gaming:71,tech:52,lifestyle:32,sports:22,news:14},
+    {day:'V',total:214,gaming:80,tech:58,lifestyle:36,sports:26,news:14},
+    {day:'S',total:178,gaming:66,tech:47,lifestyle:30,sports:22,news:13},
+    {day:'D',total:203,gaming:76,tech:55,lifestyle:34,sports:24,news:14},
+  ],
+  cats:[
+    {name:'Gaming',pct:37.4,ecpm:4.20,fill:88,col:'var(--ng)'},
+    {name:'Tech',pct:27.1,ecpm:3.85,fill:82,col:'var(--nc)'},
+    {name:'Lifestyle',pct:16.2,ecpm:2.90,fill:75,col:'var(--np)'},
+    {name:'Sports',pct:11.8,ecpm:2.40,fill:71,col:'var(--na)'},
+    {name:'News',pct:7.5,ecpm:1.80,fill:65,col:'var(--nr)'},
+  ],
+  ecpm:3.62,fill:79.4,rpm:0.84,
+};
+
+/* ─── HELPERS ────────────────────────────────────────── */
+const cur = n => '€'+parseFloat(n||0).toFixed(2);
+const fdt = s => s?(typeof s==='string'?s.slice(0,10):'--'):'--';
+function bc(s){const m={active:'g',flagged:'a',blocked:'r',pending:'a',approved:'c',paid:'g',rejected:'r',validating:'c',inactive:'x'};return m[s]||'x';}
+
+/* ─── useDB HOOK ─────────────────────────────────────── */
+function useDB(table,order,fb){
+  const [data,setData]=useState(null);
+  const [loading,setLoading]=useState(true);
+  const [mock,setMock]=useState(false);
+  const load=useCallback(async()=>{
+    if(isMock()||!sb){setData([...fb]);setMock(true);setLoading(false);return;}
+    try{
+      const {data:rows,error}=await sb.from(table).select('*').order(order,{ascending:false}).limit(300);
+      if(error||!rows)throw error;
+      setData(rows);setMock(false);
+    }catch(e){setData([...fb]);setMock(true);}
+    setLoading(false);
+  },[table]);
+  useEffect(()=>{load();const iv=setInterval(load,30000);return()=>clearInterval(iv);},[load]);
+  return {data,loading,mock,reload:load};
+}
+
+/* ─── ATOMS ──────────────────────────────────────────── */
+function KPI({l,v,s,c}){return E('div',{className:`kpi ${c}`},E('div',{className:'kl'},l),E('div',{className:`kv ${c}`},v),s&&E('div',{className:'ks'},s));}
+function Bdg({t,label}){return E('span',{className:`badge b${t||'x'}`},label);}
+function RBar({score}){
+  const col=score>=70?'var(--nr)':score>=40?'var(--na)':'var(--ng)';
+  return E('div',{className:'rb'},E('div',{className:'rb-t'},E('div',{className:'rb-f',style:{width:`${score}%`,background:col}})),E('span',{className:'mn f11',style:{color:col,minWidth:22}},score));
+}
+function Alrt({type,msg}){
+  return E('div',{className:`al al-${type}`},E('b',null,type==='r'?'! ALERTA':type==='a'?'⚠ AVISO':'ℹ INFO'),E('span',null,' — '+msg));
+}
+function Modal({title,text,onOk,onCancel,okCls}){
+  return E('div',{className:'mbg'},E('div',{className:'mbox'},E('h3',null,title),E('p',null,text),E('div',{className:'macts'},E('button',{className:'btn bn-c',onClick:onCancel},'CANCELAR'),E('button',{className:`btn ${okCls||'bn-r'}`,onClick:onOk},'CONFIRMAR'))));
+}
+function CfgBar({onApply}){
+  const [u,setU]=useState(localStorage.getItem('sb_url')||'');
+  const [k,setK]=useState(localStorage.getItem('sb_key')||'');
+  function apply(){localStorage.setItem('sb_url',u);localStorage.setItem('sb_key',k);SB_URL=u;SB_KEY=k;initSB(u,k);onApply&&onApply();}
+  return E('div',{className:'cfg'},
+    E('span',{className:'cfg-lbl'},'⚙ SUPABASE'),
+    E('input',{className:'cfg-in',placeholder:'https://xxxx.supabase.co',value:u,onChange:e=>setU(e.target.value)}),
+    E('input',{className:'cfg-in',placeholder:'anon public key...',value:k,onChange:e=>setK(e.target.value)}),
+    E('button',{className:'btn bn-a',onClick:apply},'CONECTAR')
+  );
+}
+
+/* ─── SVG BAR CHART ──────────────────────────────────── */
+function BarChart({data,ky,col}){
+  const W=460,H=108,P=26,max=Math.max(...data.map(d=>d[ky]),1);
+  const bw=Math.floor((W-P*2)/data.length)-4;
+  return E('svg',{viewBox:`0 0 ${W} ${H}`,style:{width:'100%',height:'auto',display:'block'}},
+    E('line',{x1:P,y1:H-17,x2:W-P,y2:H-17,stroke:'rgba(255,255,255,.07)',strokeWidth:1}),
+    data.map((d,i)=>{
+      const x=P+i*(bw+4);const bh=Math.max(4,((d[ky]/max)*(H-34)));const y=H-17-bh;
+      return E('g',{key:i},
+        E('rect',{x,y,width:bw,height:bh,rx:2,fill:col,opacity:.75}),
+        E('text',{x:x+bw/2,y:H-3,textAnchor:'middle',fill:'rgba(216,232,255,.35)',fontSize:9,fontFamily:'Share Tech Mono'},d.day),
+        E('text',{x:x+bw/2,y:y-3,textAnchor:'middle',fill:'rgba(216,232,255,.65)',fontSize:9,fontFamily:'Share Tech Mono'},d[ky])
+      );
+    })
+  );
+}
+
+/* ═══════════════════════════════════════════════════════
+   PANEL: OVERVIEW
+═══════════════════════════════════════════════════════ */
+function OverviewPanel(){
+  const {data:users}=useDB('users','total_earned',MK_USERS);
+  const {data:payouts}=useDB('payouts','created_at',MK_PAYOUTS);
+  if(!users||!payouts)return E('div',{className:'loading',style:{color:'var(--ng)'}},'CARGANDO...');
+
+  const rev=MK_REV;
+  const revHoy=rev.daily[rev.daily.length-1].total;
+  const rev7d=rev.daily.reduce((a,d)=>a+d.total,0);
+  const tPaid=payouts.filter(p=>p.status==='paid').reduce((a,p)=>a+parseFloat(p.amount||0),0);
+  const tPend=payouts.filter(p=>p.status==='pending').reduce((a,p)=>a+parseFloat(p.amount||0),0);
+  const profit=rev7d-tPaid;
+  const profPct=Math.min(100,Math.max(0,(profit/Math.max(rev7d,1))*100));
+  const dau=users.filter(u=>u.last_active===TODAY).length;
+  const critFraud=users.filter(u=>u.risk_score>=70).length;
+  const fraudRate=((users.filter(u=>u.risk_score>=40).length/Math.max(users.length,1))*100).toFixed(1);
+
+  return E('div',null,
+    E('div',{className:'ph'},E('div',null,E('h1',null,'Overview'),E('div',{className:'ph-tag'},'[ KPIs GLOBALES · AUTO-REFRESH 30s ]'))),
+    profit<0&&E(Alrt,{type:'r',msg:'PROFIT NEGATIVO — revisa payouts y fraude inmediatamente'}),
+    critFraud>1&&E(Alrt,{type:'a',msg:`${critFraud} usuarios con riesgo crítico (score ≥ 70)`}),
+    E('div',{className:'kg'},
+      E(KPI,{l:'REVENUE HOY',v:cur(revHoy),s:`7d: ${cur(rev7d)}`,c:'g'}),
+      E(KPI,{l:'PAYOUTS PAGADOS',v:cur(tPaid),s:`pendiente: ${cur(tPend)}`,c:'c'}),
+      E(KPI,{l:'PROFIT 7D',v:cur(profit),s:profit>=0?'positivo':'⚠ negativo',c:profit>=0?'g':'r'}),
+      E(KPI,{l:'DAU',v:dau,s:`de ${users.length} usuarios`,c:'c'}),
+      E(KPI,{l:'FRAUD RATE',v:`${fraudRate}%`,s:`${critFraud} críticos`,c:'a'}),
+      E(KPI,{l:'eCPM GLOBAL',v:`€${rev.ecpm}`,s:`fill: ${rev.fill}%`,c:'p'}),
+    ),
+    E('div',{className:'card'},
+      E('div',{className:'ch'},'PROFIT MARGIN — 7 DÍAS'),
+      E('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'baseline',marginBottom:8}},
+        E('span',{className:'mn',style:{fontSize:26,fontWeight:700,color:profit>=0?'var(--ng)':'var(--nr)'}},cur(profit)),
+        E('span',{className:'mn f11 mt'},`${profPct.toFixed(1)}% del revenue`)
+      ),
+      E('div',{className:'pbar'},E('div',{className:'pbar-f',style:{width:`${profPct}%`,background:profit>=0?'var(--ng)':'var(--nr)'}}))
+    ),
+    E('div',{className:'g2'},
+      E('div',{className:'card'},E('div',{className:'ch'},'REVENUE 7 DÍAS'),E(BarChart,{data:rev.daily,ky:'total',col:'rgba(0,255,136,.65)'})),
+      E('div',{className:'card'},
+        E('div',{className:'ch'},'FÓRMULA DE PROFIT'),
+        [
+          {l:'Revenue 7d',v:cur(rev7d),c:'var(--ng)'},
+          {l:'Payouts pagados',v:'− '+cur(tPaid),c:'var(--nr)'},
+          {l:'En cola (pendiente)',v:'⏳ '+cur(tPend),c:'var(--na)'},
+        ].map(row=>E('div',{key:row.l,style:{display:'flex',justifyContent:'space-between',padding:'8px 0',borderBottom:'1px solid var(--bd)'}},
+          E('span',{className:'mn f11 mt'},row.l),E('span',{className:'mn f11',style:{color:row.c,fontWeight:700}},row.v)
+        )),
+        E('div',{style:{display:'flex',justifyContent:'space-between',padding:'9px 0'}},
+          E('span',{className:'mn f11',style:{color:'var(--tm)',letterSpacing:1}},'= PROFIT NETO'),
+          E('span',{className:'mn',style:{fontSize:15,fontWeight:700,color:profit>=0?'var(--ng)':'var(--nr)'}},cur(profit))
+        )
+      )
+    )
+  );
+}
+
+/* ═══════════════════════════════════════════════════════
+   PANEL: REVENUE
+═══════════════════════════════════════════════════════ */
+function RevenuePanel(){
+  const rev=MK_REV;
+  const totalRev=rev.daily.reduce((a,d)=>a+d.total,0);
+  const arpu=(totalRev/MK_USERS.length).toFixed(2);
+  return E('div',null,
+    E('div',{className:'ph'},
+      E('div',null,E('h1',null,'Revenue Panel'),E('div',{className:'ph-tag'},'[ MOCK · conecta tu ad network para datos reales ]'))
+    ),
+    E('div',{className:'kg'},
+      E(KPI,{l:'REVENUE TOTAL 7D',v:cur(totalRev),s:'últimos 7 días',c:'g'}),
+      E(KPI,{l:'eCPM GLOBAL',v:`€${rev.ecpm}`,s:'por 1000 impresiones',c:'c'}),
+      E(KPI,{l:'FILL RATE',v:`${rev.fill}%`,s:'impresiones servidas',c:'g'}),
+      E(KPI,{l:'RPM / USUARIO',v:`€${rev.rpm}`,s:'revenue per user',c:'a'}),
+      E(KPI,{l:'ARPU 7D',v:`€${arpu}`,s:'avg revenue/user',c:'p'}),
+    ),
+    E('div',{className:'card'},E('div',{className:'ch'},'REVENUE DIARIO — ÚLTIMOS 7 DÍAS'),E(BarChart,{data:rev.daily,ky:'total',col:'rgba(0,255,136,.62)'})),
+    E('div',{className:'g2'},
+      E('div',{className:'card'},
+        E('div',{className:'ch'},'% POR CATEGORÍA'),
+        rev.cats.map(c=>E('div',{key:c.name,className:'pb-row'},
+          E('span',{className:'pb-lbl'},c.name),
+          E('div',{className:'pb-track'},E('div',{className:'pb-fill',style:{width:`${c.pct*2.5}%`,background:c.col}})),
+          E('span',{className:'pb-val mn f11',style:{color:c.col}},`${c.pct}%`)
+        ))
+      ),
+      E('div',{className:'card'},
+        E('div',{className:'ch'},'eCPM & FILL RATE'),
+        E('div',{className:'tw'},
+          E('table',{className:'tbl'},
+            E('thead',null,E('tr',null,['CATEGORÍA','eCPM','FILL','RENDIMIENTO'].map(h=>E('th',{key:h},h)))),
+            E('tbody',null,rev.cats.map(c=>E('tr',{key:c.name},
+              E('td',null,E('span',{className:'mn f11',style:{color:c.col}},c.name)),
+              E('td',null,E('span',{className:'mn f11',style:{color:'var(--nc)'}},`€${c.ecpm}`)),
+              E('td',null,E('span',{className:'mn f11',style:{color:c.fill>=80?'var(--ng)':'var(--na)'}},`${c.fill}%`)),
+              E('td',null,E(Bdg,{t:c.fill>=80?'g':c.fill>=70?'a':'r',label:c.fill>=80?'ALTO':c.fill>=70?'MEDIO':'BAJO'}))
+            )))
+          )
+        )
+      )
+    ),
+    E('div',{className:'card'},
+      E('div',{className:'ch'},'DESGLOSE DIARIO POR CATEGORÍA'),
+      E('div',{className:'tw'},
+        E('table',{className:'tbl'},
+          E('thead',null,E('tr',null,['DÍA','TOTAL','GAMING','TECH','LIFESTYLE','SPORTS','NEWS'].map(h=>E('th',{key:h},h)))),
+          E('tbody',null,rev.daily.map(d=>E('tr',{key:d.day},
+            E('td',null,E('span',{className:'mn f11'},d.day)),
+            E('td',null,E('span',{className:'mn f11',style:{color:'var(--ng)',fontWeight:700}},cur(d.total))),
+            E('td',null,E('span',{className:'mn f11',style:{color:'var(--ng)'}},cur(d.gaming))),
+            E('td',null,E('span',{className:'mn f11',style:{color:'var(--nc)'}},cur(d.tech))),
+            E('td',null,E('span',{className:'mn f11',style:{color:'var(--np)'}},cur(d.lifestyle))),
+            E('td',null,E('span',{className:'mn f11',style:{color:'var(--na)'}},cur(d.sports))),
+            E('td',null,E('span',{className:'mn f11 mt'},cur(d.news)))
+          )))
+        )
+      )
+    )
+  );
+}
+
+/* ═══════════════════════════════════════════════════════
+   PANEL: FRAUD
+═══════════════════════════════════════════════════════ */
+function FraudPanel(){
+  const {data:users,loading,mock,reload}=useDB('users','risk_score',MK_USERS);
+  const [filter,setFilter]=useState('all');
+  const [modal,setModal]=useState(null);
+  if(loading)return E('div',{className:'loading',style:{color:'var(--nr)'}},'CARGANDO FRAUD DATA...');
+  const susp=users.filter(u=>u.risk_score>=40);
+  const blocked=users.filter(u=>u.status==='blocked').length;
+  const avgRisk=susp.length?Math.round(susp.reduce((a,u)=>a+u.risk_score,0)/susp.length):0;
+  const fraudRate=((susp.length/Math.max(users.length,1))*100).toFixed(1);
+  const filtered=susp.filter(u=>filter==='all'||u.status===filter);
+  async function doAction(user,action){
+    setModal(null);
+    if(!isMock()&&sb){await sb.from('users').update({status:action==='block'?'blocked':action==='unblock'?'active':'flagged'}).eq('id',user.id);reload();}
+  }
+  return E('div',null,
+    E('div',{className:'ph'},E('div',null,E('h1',null,'Fraud Panel'),E('div',{className:'ph-tag'},mock?'[ MOCK DATA ]':'[ LIVE · 30s ]')),E('button',{className:'btn bn-r',onClick:reload},'↻ REFRESH')),
+    susp.length>=3&&E(Alrt,{type:'r',msg:`${susp.length} usuarios con riesgo elevado`}),
+    blocked>0&&E(Alrt,{type:'a',msg:`${blocked} cuentas bloqueadas`}),
+    E('div',{className:'kg'},
+      E(KPI,{l:'SOSPECHOSOS',v:susp.length,s:`de ${users.length} totales`,c:'r'}),
+      E(KPI,{l:'FRAUD RATE',v:`${fraudRate}%`,s:'score ≥ 40',c:'a'}),
+      E(KPI,{l:'RISK SCORE MEDIO',v:avgRisk,s:'entre sospechosos',c:'a'}),
+      E(KPI,{l:'BLOQUEADOS',v:blocked,s:'cuentas inactivas',c:'r'})
+    ),
+    E('div',{className:'card'},
+      E('div',{className:'ch'},E('span',null,'TABLA DE RIESGO'),E('div',{className:'chips'},['all','flagged','blocked'].map(f=>E('button',{key:f,className:`chip${filter===f?' on':''}`,onClick:()=>setFilter(f)},f.toUpperCase())))),
+      E('div',{className:'tw'},
+        E('table',{className:'tbl'},
+          E('thead',null,E('tr',null,['USER ID','EMAIL','RISK SCORE','STATUS','REFS','GANADO','ACCIÓN'].map(h=>E('th',{key:h},h)))),
+          E('tbody',null,filtered.map(u=>E('tr',{key:u.id},
+            E('td',null,E('span',{className:'mn f10 mt'},u.id)),
+            E('td',null,u.email),
+            E('td',null,E(RBar,{score:u.risk_score})),
+            E('td',null,E(Bdg,{t:bc(u.status),label:u.status.toUpperCase()})),
+            E('td',null,E('span',{className:'mn f11',style:{color:u.referral_count>20?'var(--nr)':''}},u.referral_count)),
+            E('td',null,E('span',{className:'mn f11',style:{color:'var(--ng)'}},cur(u.total_earned))),
+            E('td',null,E('div',{style:{display:'flex',gap:4}},
+              u.status!=='blocked'&&E('button',{className:'btn bn-r',style:{padding:'3px 8px',fontSize:9},onClick:()=>setModal({u,action:'block'})},'BLOCK'),
+              u.status==='blocked'&&E('button',{className:'btn bn-g',style:{padding:'3px 8px',fontSize:9},onClick:()=>setModal({u,action:'unblock'})},'UNBLOCK'),
+              E('button',{className:'btn bn-a',style:{padding:'3px 8px',fontSize:9},onClick:()=>setModal({u,action:'limit'})},'LIMIT')
+            ))
+          )))
+        )
+      )
+    ),
+    modal&&E(Modal,{title:`${modal.action.toUpperCase()} — ${modal.u.email}`,text:`Risk Score: ${modal.u.risk_score} · Referidos: ${modal.u.referral_count}\n¿Confirmas la acción "${modal.action}"?`,onOk:()=>doAction(modal.u,modal.action),onCancel:()=>setModal(null)})
+  );
+}
+
+/* ═══════════════════════════════════════════════════════
+   PANEL: PAYOUTS
+═══════════════════════════════════════════════════════ */
+function PayoutsPanel(){
+  const {data:payouts,loading,mock,reload}=useDB('payouts','created_at',MK_PAYOUTS);
+  const [frozen,setFrozen]=useState(false);
+  const [filter,setFilter]=useState('all');
+  const [modal,setModal]=useState(null);
+  if(loading)return E('div',{className:'loading',style:{color:'var(--nc)'}},'CARGANDO PAYOUTS...');
+  const pending=payouts.filter(p=>p.status==='pending');
+  const tPend=pending.reduce((a,p)=>a+parseFloat(p.amount||0),0);
+  const tPaid=payouts.filter(p=>p.status==='paid').reduce((a,p)=>a+parseFloat(p.amount||0),0);
+  const avg=payouts.length?payouts.reduce((a,p)=>a+parseFloat(p.amount||0),0)/payouts.length:0;
+  const filtered=payouts.filter(p=>filter==='all'||p.status===filter);
+  const STEPS=['pending','validating','approved','paid'];
+  async function doAction(p,action){
+    setModal(null);
+    const m={approve:'approved',reject:'rejected',pay:'paid',fraud:'rejected'};
+    if(!isMock()&&sb){await sb.from('payouts').update({status:m[action]}).eq('id',p.id);reload();}
+  }
+  return E('div',null,
+    E('div',{className:'ph'},
+      E('div',null,E('h1',null,'Payouts Panel'),E('div',{className:'ph-tag'},mock?'[ MOCK DATA ]':'[ LIVE · 30s ]')),
+      E('div',{className:'ph-ac'},
+        E('button',{className:frozen?'btn btn-frz':'btn bn-r',onClick:()=>setFrozen(!frozen)},frozen?'⊘ FROZEN':'⊘ FREEZE PAYOUTS'),
+        E('button',{className:'btn bn-c',onClick:reload},'↻')
+      )
+    ),
+    frozen&&E(Alrt,{type:'r',msg:'PAYOUTS CONGELADOS — no se procesarán nuevas solicitudes'}),
+    pending.length>=3&&E(Alrt,{type:'a',msg:`${pending.length} pendientes — ${cur(tPend)} en cola`}),
+    E('div',{className:'kg'},
+      E(KPI,{l:'PENDIENTES',v:pending.length,s:cur(tPend)+' en cola',c:'a'}),
+      E(KPI,{l:'TOTAL PAGADO',v:cur(tPaid),s:'histórico',c:'c'}),
+      E(KPI,{l:'PAYOUT MEDIO',v:cur(avg),s:'por solicitud',c:'g'}),
+      E(KPI,{l:'RECHAZADOS',v:payouts.filter(p=>p.status==='rejected').length,s:'bloqueados',c:'r'})
+    ),
+    E('div',{className:'card'},
+      E('div',{className:'ch'},'FLUJO DE ESTADO'),
+      E('div',{className:'flow'},STEPS.map((s,i)=>[
+        E('div',{key:s,className:`fst${filter===s?' fa':''}`,onClick:()=>setFilter(filter===s?'all':s)},`${s.toUpperCase()} (${payouts.filter(p=>p.status===s).length})`),
+        i<STEPS.length-1&&E('span',{key:`a${i}`,style:{color:'var(--tm)',fontSize:10}},'→')
+      ]))
+    ),
+    E('div',{className:'card'},
+      E('div',{className:'ch'},E('span',null,'SOLICITUDES'),E('div',{className:'chips'},['all','pending','validating','approved','paid','rejected'].map(f=>E('button',{key:f,className:`chip${filter===f?' on':''}`,onClick:()=>setFilter(f)},f.toUpperCase())))),
+      E('div',{className:'tw'},
+        E('table',{className:'tbl'},
+          E('thead',null,E('tr',null,['ID','USUARIO','MONTO','MÉTODO','ESTADO','FECHA','ACCIÓN'].map(h=>E('th',{key:h},h)))),
+          E('tbody',null,filtered.map(p=>E('tr',{key:p.id},
+            E('td',null,E('span',{className:'mn f10 mt'},p.id)),
+            E('td',null,p.email||p.user_id),
+            E('td',null,E('span',{className:'mn',style:{color:'var(--nc)',fontWeight:700}},cur(p.amount))),
+            E('td',null,E(Bdg,{t:'x',label:p.method||'--'})),
+            E('td',null,E(Bdg,{t:bc(p.status),label:p.status.toUpperCase()})),
+            E('td',null,E('span',{className:'mn f10 mt'},fdt(p.created_at))),
+            E('td',null,E('div',{style:{display:'flex',gap:4}},
+              p.status==='pending'&&[
+                E('button',{key:'a',className:'btn bn-g',style:{padding:'3px 8px',fontSize:9},onClick:()=>setModal({p,action:'approve'})},'APR'),
+                E('button',{key:'r',className:'btn bn-r',style:{padding:'3px 8px',fontSize:9},onClick:()=>setModal({p,action:'reject'})},'REJ'),
+                E('button',{key:'f',className:'btn bn-a',style:{padding:'3px 8px',fontSize:9},onClick:()=>setModal({p,action:'fraud'})},'FRAUD')
+              ],
+              p.status==='approved'&&E('button',{className:'btn bn-c',style:{padding:'3px 8px',fontSize:9},onClick:()=>setModal({p,action:'pay'})},'MARK PAID'),
+              ['paid','rejected'].includes(p.status)&&E('span',{className:'mn f10 mt'},'—')
+            ))
+          )))
+        )
+      )
+    ),
+    modal&&E(Modal,{title:`${modal.action.toUpperCase()} — ${cur(modal.p.amount)}`,text:`¿Confirmas "${modal.action}" para ${modal.p.id}?`,onOk:()=>doAction(modal.p,modal.action),onCancel:()=>setModal(null),okCls:['approve','pay'].includes(modal.action)?'bn-g':'bn-r'})
+  );
+}
+
+/* ═══════════════════════════════════════════════════════
+   PANEL: USERS
+═══════════════════════════════════════════════════════ */
+function UsersPanel(){
+  const {data:users,loading,mock,reload}=useDB('users','total_earned',MK_USERS);
+  const [filter,setFilter]=useState('all');
+  if(loading)return E('div',{className:'loading',style:{color:'var(--ng)'}},'CARGANDO USERS...');
+  const dau=users.filter(u=>u.last_active===TODAY).length;
+  const mau=users.filter(u=>u.status==='active').length;
+  const avgD1=(users.reduce((a,u)=>a+(u.d1_retention||0),0)/Math.max(users.length,1)*100).toFixed(1);
+  const avgD7=(users.reduce((a,u)=>a+(u.d7_retention||0),0)/Math.max(users.length,1)*100).toFixed(1);
+  const top5=[...users].sort((a,b)=>b.total_earned-a.total_earned).slice(0,5);
+  const seg={active:0,flagged:0,blocked:0};users.forEach(u=>{if(seg[u.status]!==undefined)seg[u.status]++;});
+  const arpu=(users.reduce((a,u)=>a+u.total_earned,0)/Math.max(users.length,1)).toFixed(2);
+  const filtered=users.filter(u=>{if(filter==='all')return true;if(filter==='top')return u.total_earned>=50;if(filter==='risk')return u.risk_score>=40;return u.status===filter;});
+  return E('div',null,
+    E('div',{className:'ph'},E('div',null,E('h1',null,'Users Panel'),E('div',{className:'ph-tag'},mock?'[ MOCK DATA ]':'[ LIVE · 30s ]')),E('button',{className:'btn bn-g',onClick:reload},'↻ REFRESH')),
+    E('div',{className:'kg'},
+      E(KPI,{l:'DAU',v:dau,s:`de ${users.length} totales`,c:'g'}),
+      E(KPI,{l:'MAU',v:mau,s:'activos',c:'c'}),
+      E(KPI,{l:'RET. D1',v:`${avgD1}%`,s:'media',c:'c'}),
+      E(KPI,{l:'RET. D7',v:`${avgD7}%`,s:'media',c:'g'}),
+      E(KPI,{l:'ARPU',v:`€${arpu}`,s:'avg rev/user',c:'p'})
+    ),
+    E('div',{className:'g2'},
+      E('div',{className:'card'},
+        E('div',{className:'ch'},'TOP 5 POR REVENUE'),
+        top5.map((u,i)=>E('div',{key:u.id,className:'top-row'},
+          E('span',{className:'mn f10',style:{color:'var(--na)',minWidth:20}},`#${i+1}`),
+          E('span',{style:{flex:1,fontSize:12,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},u.email),
+          E('span',{className:'mn f11',style:{color:'var(--ng)',fontWeight:700,marginRight:7}},cur(u.total_earned)),
+          E(Bdg,{t:bc(u.status),label:u.status.toUpperCase()})
+        ))
+      ),
+      E('div',{className:'card'},
+        E('div',{className:'ch'},'RETENCIÓN & SEGMENTOS'),
+        ['D1','D7'].map(d=>{const v=d==='D1'?parseFloat(avgD1):parseFloat(avgD7);return E('div',{key:d,className:'rr'},E('span',{className:'rl'},d),E('div',{className:'rt'},E('div',{className:'rf',style:{width:`${v}%`}})),E('span',{className:'rp'},`${v}%`));}),
+        E('div',{style:{marginTop:12,display:'flex',gap:8}},
+          [{k:'active',l:'Activos',c:'var(--ng)'},{k:'flagged',l:'Flagged',c:'var(--na)'},{k:'blocked',l:'Blocked',c:'var(--nr)'}].map(s=>E('div',{key:s.k,className:'sc'},E('div',{className:'mn',style:{fontSize:20,fontWeight:700,color:s.c}},seg[s.k]||0),E('div',{className:'mn f10 mt',style:{marginTop:3,letterSpacing:1}},s.l.toUpperCase())))
+        )
+      )
+    ),
+    E('div',{className:'card'},
+      E('div',{className:'ch'},E('span',null,'DIRECTORIO'),E('div',{className:'chips'},[{k:'all',l:'TODOS'},{k:'top',l:'TOP REV'},{k:'active',l:'ACTIVOS'},{k:'risk',l:'RIESGO'},{k:'blocked',l:'BLOCKED'}].map(f=>E('button',{key:f.k,className:`chip${filter===f.k?' on':''}`,onClick:()=>setFilter(f.k)},f.l)))),
+      E('div',{className:'tw'},
+        E('table',{className:'tbl'},
+          E('thead',null,E('tr',null,['ID','EMAIL','GANADO','RETIRADO','REFS','RISK','ESTADO','LAST ACTIVE'].map(h=>E('th',{key:h},h)))),
+          E('tbody',null,filtered.map(u=>E('tr',{key:u.id},
+            E('td',null,E('span',{className:'mn f10 mt'},u.id)),
+            E('td',null,u.email),
+            E('td',null,E('span',{className:'mn f11',style:{color:'var(--ng)'}},cur(u.total_earned))),
+            E('td',null,E('span',{className:'mn f11 mt'},cur(u.total_withdrawn))),
+            E('td',null,E('span',{className:'mn f11',style:{color:u.referral_count>20?'var(--nr)':''}},u.referral_count)),
+            E('td',null,E(RBar,{score:u.risk_score})),
+            E('td',null,E(Bdg,{t:bc(u.status),label:u.status.toUpperCase()})),
+            E('td',null,E('span',{className:'mn f10 mt'},fdt(u.last_active)))
+          )))
+        )
+      )
+    )
+  );
+}
+
+/* ═══════════════════════════════════════════════════════
+   PANEL: REFERRALS
+═══════════════════════════════════════════════════════ */
+function ReferralsPanel(){
+  const {data:refs,loading,mock,reload}=useDB('referrals','created_at',MK_REFS);
+  const [filter,setFilter]=useState('all');
+  if(loading)return E('div',{className:'loading',style:{color:'var(--np)'}},'CARGANDO REFERRALS...');
+  const active=refs.filter(r=>r.status==='active').length;
+  const flagged=refs.filter(r=>r.status==='flagged').length;
+  const totalRev=refs.reduce((a,r)=>a+parseFloat(r.revenue_generated||0),0);
+  const newToday=refs.filter(r=>r.created_at&&r.created_at.slice(0,10)===TODAY).length;
+  const byRef={};refs.forEach(r=>{byRef[r.referrer_email]=(byRef[r.referrer_email]||0)+1;});
+  const clusters=Object.entries(byRef).filter(([,n])=>n>=3).map(([email,n])=>({email,n}));
+  const filtered=refs.filter(r=>filter==='all'||r.status===filter);
+  const topRev={};refs.forEach(r=>{topRev[r.referrer_email]=(topRev[r.referrer_email]||0)+parseFloat(r.revenue_generated||0);});
+  const top5=Object.entries(topRev).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  return E('div',null,
+    E('div',{className:'ph'},E('div',null,E('h1',null,'Referrals Panel'),E('div',{className:'ph-tag'},mock?'[ MOCK DATA ]':'[ LIVE · 30s ]')),E('button',{className:'btn bn-c',onClick:reload},'↻ REFRESH')),
+    flagged>0&&E(Alrt,{type:'r',msg:`${flagged} referidos sospechosos — posible granja`}),
+    clusters.length>0&&E(Alrt,{type:'a',msg:`${clusters.length} usuario(s) con clusters de referidos sospechosos`}),
+    E('div',{className:'kg'},
+      E(KPI,{l:'TOTAL REFERIDOS',v:refs.length,s:'histórico',c:'p'}),
+      E(KPI,{l:'ACTIVOS',v:active,s:'generando revenue',c:'g'}),
+      E(KPI,{l:'REVENUE TOTAL',v:cur(totalRev),s:'por referidos',c:'c'}),
+      E(KPI,{l:'FLAGGED',v:flagged,s:'sospechosos',c:'r'}),
+      E(KPI,{l:'NUEVOS HOY',v:newToday,s:'registros hoy',c:'a'})
+    ),
+    E('div',{className:'g2'},
+      E('div',{className:'card'},
+        E('div',{className:'ch'},'TOP REFERRERS POR REVENUE'),
+        top5.length===0?E('p',{className:'mn f11 mt'},'Sin datos'):
+        top5.map(([email,rev],i)=>E('div',{key:email,className:'top-row'},
+          E('span',{className:'mn f10',style:{color:'var(--na)',minWidth:20}},`#${i+1}`),
+          E('span',{style:{flex:1,fontSize:12,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},email),
+          E('span',{className:'mn f11',style:{color:'var(--ng)',fontWeight:700,marginRight:7}},cur(rev)),
+          E('span',{className:'mn f10 mt'},`×${byRef[email]}`)
+        ))
+      ),
+      E('div',{className:'card'},
+        E('div',{className:'ch'},'CLUSTERS SOSPECHOSOS'),
+        clusters.length===0?
+          E('p',{className:'mn f11',style:{color:'var(--ng)',padding:'8px 0'}},'✓ Sin clusters detectados'):
+          clusters.map(c=>E('div',{key:c.email,style:{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 0',borderBottom:'1px solid var(--bd)'}},
+            E('span',{style:{fontSize:12,color:'var(--nr)'}},c.email),
+            E('span',{className:'mn f10',style:{color:'var(--na)'}},`${c.n} referidos`),
+            E(Bdg,{t:'r',label:'GRANJA?'})
+          ))
+      )
+    ),
+    E('div',{className:'card'},
+      E('div',{className:'ch'},E('span',null,'DIRECTORIO'),E('div',{className:'chips'},['all','active','inactive','flagged'].map(f=>E('button',{key:f,className:`chip${filter===f?' on':''}`,onClick:()=>setFilter(f)},f.toUpperCase())))),
+      E('div',{className:'tw'},
+        E('table',{className:'tbl'},
+          E('thead',null,E('tr',null,['ID','REFERRER','REFERIDO','REVENUE','ESTADO','FECHA'].map(h=>E('th',{key:h},h)))),
+          E('tbody',null,filtered.map(r=>E('tr',{key:r.id},
+            E('td',null,E('span',{className:'mn f10 mt'},r.id)),
+            E('td',null,E('span',{style:{color:byRef[r.referrer_email]>=3?'var(--na)':'var(--tx)',fontSize:12}},r.referrer_email)),
+            E('td',null,E('span',{style:{fontSize:12}},r.referred_email)),
+            E('td',null,E('span',{className:'mn f11',style:{color:'var(--nc)',fontWeight:700}},cur(r.revenue_generated))),
+            E('td',null,E(Bdg,{t:bc(r.status),label:r.status.toUpperCase()})),
+            E('td',null,E('span',{className:'mn f10 mt'},fdt(r.created_at)))
+          )))
+        )
+      )
+    )
+  );
+}
+
+/* ═══════════════════════════════════════════════════════
+   APP ROOT
+═══════════════════════════════════════════════════════ */
+function App(){
+  const [page,setPage]=useState('overview');
+  const [showCfg,setShowCfg]=useState(isMock());
+  const [tick,setTick]=useState(0);
+  const [time,setTime]=useState('');
+  useEffect(()=>{const iv=setInterval(()=>setTime(new Date().toLocaleTimeString('es')),1000);return()=>clearInterval(iv);},[]);
+
+  const nav=[
+    {id:'overview',label:'Overview',icon:'◉'},
+    {id:'revenue',label:'Revenue',icon:'▲'},
+    {id:'fraud',label:'Fraud',icon:'⚑'},
+    {id:'payouts',label:'Payouts',icon:'⊕'},
+    {id:'users',label:'Users',icon:'◈'},
+    {id:'referrals',label:'Referrals',icon:'⇄'},
+  ];
+
+  return E('div',{id:'root'},
+    E('div',{className:'sb'},
+      E('div',{className:'sb-lg'},E('div',{className:'tg'},'CONTROL CTR'),E('div',{className:'nm'},'AdBanner'),E('div',{className:'vr'},'v2.0 · 6 paneles')),
+      E('div',{className:'nav'},
+        nav.map(n=>E('div',{key:n.id,className:`ni${page===n.id?' on':''}`,onClick:()=>setPage(n.id)},E('span',{className:'ni-ic'},n.icon),E('span',{className:'nl'},n.label))),
+        E('div',{className:'nd'}),
+        E('div',{className:'ni',onClick:()=>setShowCfg(!showCfg)},E('span',{className:'ni-ic'},'⚙'),E('span',{className:'nl'},'Supabase'))
+      ),
+      E('div',{className:'sb-ft'},
+        E('div',{className:'sb-st'},E('div',{className:`dot ${isMock()?'dot-a':'dot-g'}`}),E('span',{className:'sb-st-t'},isMock()?'MOCK MODE':'LIVE')),
+        E('div',{className:'sb-tm'},time)
+      )
+    ),
+    E('div',{className:'main'},
+      showCfg&&E(CfgBar,{onApply:()=>{setShowCfg(false);setTick(t=>t+1);}}),
+      E('div',{key:tick},
+        page==='overview'&&E(OverviewPanel),
+        page==='revenue'&&E(RevenuePanel),
+        page==='fraud'&&E(FraudPanel),
+        page==='payouts'&&E(PayoutsPanel),
+        page==='users'&&E(UsersPanel),
+        page==='referrals'&&E(ReferralsPanel)
+      )
+    )
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(E(App));
+}); // ← FIX: fin del window.addEventListener('load')
+</script>
+</body>
+</html>
